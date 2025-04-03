@@ -315,3 +315,67 @@ let b = ab.delete("a");
 console.log(b.has("b"));
 console.log(a.has("b"));
 console.log(b.has("a"));
+
+//Chapter 8 - Bugs and Errors
+//Ex1 - Retry
+class MultiplicatorUnitFailure extends Error {}
+    function primitiveMultiply(a, b) {
+        if (Math.random() < 0.2) {
+            return a * b;
+        } else {
+            throw new MultiplicatorUnitFailure("Klunk");
+        }
+    }
+
+    function reliableMultiply (a, b) {
+        for(;;) {
+            try {
+                return primitiveMultiply(a, b);
+            } catch(e) {
+                if (!(e instanceof MultiplicatorUnitFailure)) {
+                    throw e;
+                }
+            }
+        }
+    }
+
+    console.log(reliableMultiply(8, 8));
+
+    //Ex2 - The locked box
+    const box = new class {
+        locked = true;
+        #content = [];
+
+        unlock() {this.locked = false; }
+        lock() {this.locked = true; }
+        get content() {
+            if (this.locked) throw new Error("Locked!");
+            return this.#content;
+        }
+    };
+
+    function withBoxUnlocked(body) {
+        let locked = box.locked;
+        if (locked) box.unlock();
+        try { 
+            return body();
+        } catch (e) {
+            throw e;
+        } finally {
+            if(locked) box.lock();
+        }
+    }
+
+    withBoxUnlocked(() => {
+        box.content.push("gold piece");
+        console.log(box.content);
+    });
+
+    try {
+        withBoxUnlocked(() => {
+            throw new Error("Pirates on the horizon! Abort!");
+        });
+    } catch (e) {
+        console.log("Error raised: " + e);
+    }
+    console.log(box.locked);
